@@ -1,0 +1,16 @@
+import api from './axios'
+
+export const getMeals = async () => {
+  const response = await api.get('/meals')
+  return response.data
+}
+
+export const getMealById = async (mealId) => {
+  const response = await api.get(`/meals/${mealId}`)
+  return response.data
+}
+
+export const createMeal = async (payload) => {
+  const response = await api.post('/meals', payload)
+  return response.data
+}
