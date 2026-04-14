@@ -86,7 +86,8 @@ function BottomNavBar() {
 
   return (
     <>
-      <nav className="sticky bottom-0 z-40 border-t border-slate-200 bg-white px-2 pb-3 pt-2">
+      <nav className="sticky bottom-0 z-40 border-t border-slate-200 bg-white px-2 pt-2"
+style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
         <div className="mx-auto grid max-w-4xl grid-cols-5 items-end">
           {navItems.slice(0, 2).map((item) => {
             const Icon = item.icon

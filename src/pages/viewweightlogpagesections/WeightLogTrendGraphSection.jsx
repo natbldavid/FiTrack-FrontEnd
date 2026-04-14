@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ROUTES } from '../../routes/routePaths'
 import { getWeightTrend } from '../../api/weightLogApi'
 
 const CHART_WIDTH = 320
@@ -9,20 +7,6 @@ const LEFT_PADDING = 34
 const RIGHT_PADDING = 12
 const TOP_PADDING = 14
 const BOTTOM_PADDING = 28
-
-function SideArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 15 15"
-      className="h-4 w-4"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path d="M8.29289 2.29289C8.68342 1.90237 9.31658 1.90237 9.70711 2.29289L14.2071 6.79289C14.5976 7.18342 14.5976 7.81658 14.2071 8.20711L9.70711 12.7071C9.31658 13.0976 8.68342 13.0976 8.29289 12.7071C7.90237 12.3166 7.90237 11.6834 8.29289 11.2929L11 8.5H1.5C0.947715 8.5 0.5 8.05228 0.5 7.5C0.5 6.94772 0.947715 6.5 1.5 6.5H11L8.29289 3.70711C7.90237 3.31658 7.90237 2.68342 8.29289 2.29289Z" />
-    </svg>
-  )
-}
 
 const formatDateKey = (date) => {
   const year = date.getFullYear()
@@ -150,7 +134,7 @@ const buildAreaPath = (points) => {
   return `${linePath} L ${lastPoint.x} ${bottomY} L ${firstPoint.x} ${bottomY} Z`
 }
 
-function WeightTrendSection({ selectedDate }) {
+function WeightLogTrendGraphSection({ selectedDate }) {
   const [weightEntries, setWeightEntries] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -215,21 +199,13 @@ function WeightTrendSection({ selectedDate }) {
   )
 
   return (
-    <section className="px-4 pt-4">
+    <section className="px-1 pt-4">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-black">Weight Trend</h3>
             <p className="text-xs text-slate-500">Last 28 days</p>
           </div>
-
-          <Link
-            to={ROUTES.WEIGHT_LOGS}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:bg-slate-50"
-            aria-label="Go to weight logs page"
-          >
-            <SideArrowIcon />
-          </Link>
         </div>
 
         <div className="mt-4 w-full">
@@ -241,7 +217,7 @@ function WeightTrendSection({ selectedDate }) {
           >
             <defs>
               <linearGradient
-                id="weightTrendSectionAreaGradient"
+                id="weightTrendAreaGradient"
                 x1="0"
                 y1={TOP_PADDING}
                 x2="0"
@@ -278,7 +254,7 @@ function WeightTrendSection({ selectedDate }) {
             ))}
 
             {areaPath ? (
-              <path d={areaPath} fill="url(#weightTrendSectionAreaGradient)" />
+              <path d={areaPath} fill="url(#weightTrendAreaGradient)" />
             ) : null}
 
             {linePath ? (
@@ -317,4 +293,4 @@ function WeightTrendSection({ selectedDate }) {
   )
 }
 
-export default WeightTrendSection
+export default WeightLogTrendGraphSection

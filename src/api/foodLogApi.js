@@ -9,3 +9,7 @@ export const createFoodLog = async (payload) => {
   const response = await api.post('/foodlogs', payload)
   return response.data
 }
+
+export const deleteFoodLog = async (foodLogId) => {
+  await api.delete(`/foodlogs/${foodLogId}`)
+}

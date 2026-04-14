@@ -1,3 +1,6 @@
+import { useLocation, useNavigate } from 'react-router-dom'
+import { getViewFoodRoute, getViewMealRoute } from '../../routes/routePaths'
+
 const formatCalories = (value) => {
   const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0
   return Math.round(safeValue)
@@ -32,7 +35,10 @@ function PlusCircleButton({ onClick, disabled = false }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick?.()
+      }}
       disabled={disabled}
       className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-green-600 disabled:opacity-50"
       aria-label="Add item"
@@ -54,7 +60,53 @@ function PlusCircleButton({ onClick, disabled = false }) {
   )
 }
 
-function ResultCard({ name, calories, subtitle = '', onAdd, disabled = false }) {
+function ResultCard({
+  name,
+  calories,
+  subtitle = '',
+  onAdd,
+  onPress,
+  disabled = false,
+  isPressable = false,
+}) {
+  if (isPressable) {
+    return (
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        onClick={() => {
+          if (!disabled) {
+            onPress?.()
+          }
+        }}
+        onKeyDown={(event) => {
+          if (disabled) return
+
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onPress?.()
+          }
+        }}
+        className={`rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-slate-200/70 ${
+          disabled ? 'opacity-50' : 'cursor-pointer'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-black">
+              {name}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              {formatCalories(calories)} cal{subtitle ? ` · ${subtitle}` : ''}
+            </div>
+          </div>
+
+          <PlusCircleButton onClick={onAdd} disabled={disabled} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-slate-200/70">
       <div className="flex items-start justify-between gap-3">
@@ -77,6 +129,8 @@ function ResultGroup({
   type,
   onAddFood,
   onAddMeal,
+  onOpenFood,
+  onOpenMeal,
   isSubmitting,
 }) {
   return (
@@ -89,8 +143,23 @@ function ResultGroup({
             key={`${type}-${item.id}`}
             name={item.name}
             calories={type === 'meal' ? item.totalCalories : item.calories}
-            subtitle={type === 'meal' ? '' : item.servingDescription || ''}
+            subtitle={
+              type === 'meal'
+                ? item.description || ''
+                : item.servingDescription || ''
+            }
             disabled={isSubmitting}
+            isPressable={type === 'meal' || type === 'food'}
+            onPress={() => {
+              if (type === 'meal') {
+                onOpenMeal(item)
+                return
+              }
+
+              if (type === 'food') {
+                onOpenFood(item)
+              }
+            }}
             onAdd={() => {
               if (type === 'meal') {
                 onAddMeal(item)
@@ -115,6 +184,9 @@ function EmptyState({ title }) {
 }
 
 function FoodResultsSection({ pageState }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const {
     selectedTab,
     searchTerm,
@@ -133,6 +205,31 @@ function FoodResultsSection({ pageState }) {
   const favouriteFoods = filteredFoods.filter((food) => food.isFavorite)
   const allFavourites = [...favouriteFoods]
 
+  const mealSlot =
+    location.state?.mealSlot ?? location.state?.selectedMealSlot ?? null
+
+  const selectedDate = location.state?.selectedDate ?? null
+
+  const handleOpenMeal = (meal) => {
+    navigate(getViewMealRoute(meal.id), {
+      state: {
+        mealSlot,
+        selectedDate,
+        viewMode: 'log',
+      },
+    })
+  }
+
+  const handleOpenFood = (food) => {
+    navigate(getViewFoodRoute(food.id), {
+      state: {
+        mealSlot,
+        selectedDate,
+        viewMode: 'log',
+      },
+    })
+  }
+
   if (selectedTab === 'favourites') {
     return (
       <section>
@@ -143,6 +240,8 @@ function FoodResultsSection({ pageState }) {
             type="food"
             onAddFood={onAddFood}
             onAddMeal={onAddMeal}
+            onOpenFood={handleOpenFood}
+            onOpenMeal={handleOpenMeal}
             isSubmitting={isSubmitting}
           />
         ) : (
@@ -162,6 +261,8 @@ function FoodResultsSection({ pageState }) {
             type="food"
             onAddFood={onAddFood}
             onAddMeal={onAddMeal}
+            onOpenFood={handleOpenFood}
+            onOpenMeal={handleOpenMeal}
             isSubmitting={isSubmitting}
           />
         ) : (
@@ -181,6 +282,8 @@ function FoodResultsSection({ pageState }) {
             type="meal"
             onAddFood={onAddFood}
             onAddMeal={onAddMeal}
+            onOpenFood={handleOpenFood}
+            onOpenMeal={handleOpenMeal}
             isSubmitting={isSubmitting}
           />
         ) : (
@@ -209,6 +312,8 @@ function FoodResultsSection({ pageState }) {
               type="food"
               onAddFood={onAddFood}
               onAddMeal={onAddMeal}
+              onOpenFood={handleOpenFood}
+              onOpenMeal={handleOpenMeal}
               isSubmitting={isSubmitting}
             />
           ) : (
@@ -222,6 +327,8 @@ function FoodResultsSection({ pageState }) {
               type="food"
               onAddFood={onAddFood}
               onAddMeal={onAddMeal}
+              onOpenFood={handleOpenFood}
+              onOpenMeal={handleOpenMeal}
               isSubmitting={isSubmitting}
             />
           ) : (
@@ -235,6 +342,8 @@ function FoodResultsSection({ pageState }) {
               type="meal"
               onAddFood={onAddFood}
               onAddMeal={onAddMeal}
+              onOpenFood={handleOpenFood}
+              onOpenMeal={handleOpenMeal}
               isSubmitting={isSubmitting}
             />
           ) : (

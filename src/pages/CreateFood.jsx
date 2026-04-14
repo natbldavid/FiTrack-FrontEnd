@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { uploadImageToCloudinary } from '../api/cloudinaryApi'
 import { createFood } from '../api/foodApi'
 
 function BackIcon({ className = 'h-6 w-6' }) {
@@ -54,6 +55,24 @@ function CloseIcon({ className = 'h-5 w-5' }) {
   )
 }
 
+function CameraIcon({ className = 'h-6 w-6' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h3l2-2h6l2 2h3v12H4z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </svg>
+  )
+}
+
 function SuccessModal({ onClose }) {
   return (
     <>
@@ -104,8 +123,53 @@ function Field({ label, value, onChange, type = 'text', placeholder = '' }) {
   )
 }
 
+function AddPhotoSheet({ onClose, onTakePhoto, onChoosePhoto }) {
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/30"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="fixed inset-x-4 bottom-4 z-50 rounded-3xl bg-white p-4 shadow-2xl">
+        <div className="mb-3 text-center text-sm font-semibold text-slate-700">
+          Add Photo
+        </div>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={onTakePhoto}
+            className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-medium text-black"
+          >
+            Open Camera
+          </button>
+
+          <button
+            type="button"
+            onClick={onChoosePhoto}
+            className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-medium text-black"
+          >
+            Choose From Files
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function CreateFood() {
   const navigate = useNavigate()
+  const cameraInputRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -116,9 +180,21 @@ function CreateFood() {
     fat: '',
   })
 
+  const [selectedImageFile, setSelectedImageFile] = useState(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [showPhotoSheet, setShowPhotoSheet] = useState(false)
+
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl)
+      }
+    }
+  }, [imagePreviewUrl])
 
   const updateField = (field, value) => {
     setFormData((current) => ({
@@ -127,14 +203,56 @@ function CreateFood() {
     }))
   }
 
+  const setSelectedImage = (file) => {
+    if (!file) return
+
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl)
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setSelectedImageFile(file)
+    setImagePreviewUrl(previewUrl)
+  }
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setSelectedImage(file)
+    setShowPhotoSheet(false)
+
+    event.target.value = ''
+  }
+
+  const handleRemoveImage = () => {
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl)
+    }
+
+    setSelectedImageFile(null)
+    setImagePreviewUrl('')
+  }
+
   const handleSave = async () => {
     try {
       setIsSaving(true)
       setErrorMessage('')
 
+      let imageUrl = null
+
+      if (selectedImageFile) {
+        const uploadResult = await uploadImageToCloudinary(
+          selectedImageFile,
+          'fitrack/foods'
+        )
+        imageUrl = uploadResult.secureUrl
+      }
+
       await createFood({
         name: formData.name.trim(),
         servingDescription: formData.servingDescription.trim() || null,
+        imageUrl,
         calories: Number(formData.calories) || 0,
         protein: Number(formData.protein) || 0,
         carbs: Number(formData.carbs) || 0,
@@ -244,8 +362,70 @@ function CreateFood() {
               />
             </div>
           </section>
+
+          <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-black">Photo</h2>
+
+              {selectedImageFile ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="text-sm font-semibold text-red-500"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+
+            {imagePreviewUrl ? (
+              <div className="mt-4">
+                <img
+                  src={imagePreviewUrl}
+                  alt="Selected food preview"
+                  className="h-48 w-full rounded-2xl object-cover ring-1 ring-slate-200"
+                />
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => setShowPhotoSheet(true)}
+              className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-slate-600"
+            >
+              <CameraIcon className="h-5 w-5" />
+              <span className="text-sm font-semibold">
+                {imagePreviewUrl ? 'Change Photo' : 'Add Photo'}
+              </span>
+            </button>
+
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </section>
         </div>
       </div>
+
+      {showPhotoSheet ? (
+        <AddPhotoSheet
+          onClose={() => setShowPhotoSheet(false)}
+          onTakePhoto={() => cameraInputRef.current?.click()}
+          onChoosePhoto={() => fileInputRef.current?.click()}
+        />
+      ) : null}
 
       {showSuccessModal ? (
         <SuccessModal

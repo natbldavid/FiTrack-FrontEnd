@@ -14,3 +14,8 @@ export const createMeal = async (payload) => {
   const response = await api.post('/meals', payload)
   return response.data
 }
+
+export const updateMeal = async (mealId, payload) => {
+  const response = await api.put(`/meals/${mealId}`, payload)
+  return response.data
+}

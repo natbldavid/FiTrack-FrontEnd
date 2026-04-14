@@ -59,7 +59,7 @@ function CaloriesCardSection({ calorieGoal = 0, foodCalories = 0 }) {
                 cy="60"
                 r="42"
                 stroke={progressColor}
-                strokeWidth="10"
+                strokeWidth="7"
                 strokeLinecap="round"
                 fill="none"
                 strokeDasharray={circumference}

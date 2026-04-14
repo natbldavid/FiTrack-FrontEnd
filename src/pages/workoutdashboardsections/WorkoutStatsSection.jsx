@@ -87,7 +87,7 @@ function ActivityDonut({
             cy="60"
             r={radius}
             stroke={color}
-            strokeWidth="10"
+            strokeWidth="7"
             strokeLinecap="round"
             fill="none"
             strokeDasharray={circumference}

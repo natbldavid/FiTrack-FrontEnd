@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getDailyFoodSummary } from '../api/foodLogApi'
 import { getUserGoalsHistory } from '../api/userApi'
 import TodayTitleSection from './todaypagesections/TodayTitleSection'
@@ -6,6 +6,8 @@ import CaloriesCardSection from './todaypagesections/CaloriesCardSection'
 import MacrosCardSection from './todaypagesections/MacrosCardSection'
 import GymCardsSection from './todaypagesections/GymCardsSection'
 import WeightTrendSection from './todaypagesections/WeightTrendSection'
+
+const SWIPE_THRESHOLD = 50
 
 const formatDateString = (date) => {
   const year = date.getFullYear()
@@ -24,6 +26,13 @@ const getStartOfDay = (date) => {
   const result = new Date(date)
   result.setHours(0, 0, 0, 0)
   return result
+}
+
+const addDays = (date, days) => {
+  const nextDate = new Date(date)
+  nextDate.setDate(nextDate.getDate() + days)
+  nextDate.setHours(0, 0, 0, 0)
+  return nextDate
 }
 
 const findGoalsHistoryForDate = (historyRows, targetDate) => {
@@ -54,6 +63,9 @@ function TodayPage() {
   const [selectedGoals, setSelectedGoals] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const touchStartXRef = useRef(null)
+  const touchStartYRef = useRef(null)
 
   useEffect(() => {
     const loadTodayData = async () => {
@@ -88,6 +100,42 @@ function TodayPage() {
     loadTodayData()
   }, [selectedDate])
 
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0]
+    touchStartXRef.current = touch.clientX
+    touchStartYRef.current = touch.clientY
+  }
+
+  const handleTouchEnd = (event) => {
+    if (
+      touchStartXRef.current === null ||
+      touchStartYRef.current === null
+    ) {
+      return
+    }
+
+    const touch = event.changedTouches[0]
+    const deltaX = touch.clientX - touchStartXRef.current
+    const deltaY = touch.clientY - touchStartYRef.current
+
+    touchStartXRef.current = null
+    touchStartYRef.current = null
+
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY)
+    const passedThreshold = Math.abs(deltaX) > SWIPE_THRESHOLD
+
+    if (!isHorizontalSwipe || !passedThreshold) {
+      return
+    }
+
+    if (deltaX < 0) {
+      setSelectedDate((current) => addDays(current, 1))
+      return
+    }
+
+    setSelectedDate((current) => addDays(current, -1))
+  }
+
   if (isLoading) {
     return <div className="px-4 py-4 text-sm text-slate-500">Loading...</div>
   }
@@ -97,7 +145,11 @@ function TodayPage() {
   }
 
   return (
-    <div className="pb-4">
+    <div
+      className="pb-4"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <TodayTitleSection
         selectedDate={selectedDate}
         onChangeDate={setSelectedDate}

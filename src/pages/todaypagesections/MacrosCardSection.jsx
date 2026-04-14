@@ -1,3 +1,8 @@
+function roundUpTo1Decimal(value) {
+  const num = Number(value) || 0
+  return Math.ceil(num * 10) / 10
+}
+
 function MacroDonut({
   title,
   consumed = 0,
@@ -5,7 +10,12 @@ function MacroDonut({
   color = '#3b82f6',
 }) {
   const safeGoal = goal > 0 ? goal : 1
-  const remaining = Math.max(goal - consumed, 0)
+
+  const roundedConsumed = roundUpTo1Decimal(consumed)
+  const roundedGoal = roundUpTo1Decimal(goal)
+  const remainingRaw = Math.max(goal - consumed, 0)
+  const roundedRemaining = roundUpTo1Decimal(remainingRaw)
+
   const progress = Math.min(consumed / safeGoal, 1)
 
   const radius = 32
@@ -36,7 +46,7 @@ function MacroDonut({
             cy="60"
             r={radius}
             stroke={color}
-            strokeWidth="10"
+            strokeWidth="7"
             strokeLinecap="round"
             fill="none"
             strokeDasharray={circumference}
@@ -46,14 +56,16 @@ function MacroDonut({
 
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-lg font-bold leading-none text-black">
-            {consumed}
+            {roundedConsumed}
           </span>
-          <span className="mt-0 text-xs text-slate-500">/{goal}g</span>
+          <span className="mt-0 text-xs text-slate-500">
+            /{roundedGoal}g
+          </span>
         </div>
       </div>
 
       <span className="text-center text-xs leading-none -mt-4 text-slate-500">
-        {remaining}g left
+        {roundedRemaining}g left
       </span>
     </div>
   )
