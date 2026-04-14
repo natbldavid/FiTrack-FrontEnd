@@ -98,11 +98,15 @@ const getProgressiveOverloadEntry = (session, exerciseId) => {
     ? Math.max(...completedSets.map((set) => set.reps))
     : 0
 
-  if (!maxWeight || totalReps <= 0 || bestSetReps <= 0) {
+  const averageReps = completedSets.length
+    ? totalReps / completedSets.length
+    : 0
+
+  if (!maxWeight || totalReps <= 0 || bestSetReps <= 0 || averageReps <= 0) {
     return null
   }
 
-  const score = maxWeight * (1 + bestSetReps / 30)
+  const score = maxWeight * (1 + averageReps / 30 + bestSetReps / 60)
 
   return {
     sessionId: session.id,
@@ -110,6 +114,7 @@ const getProgressiveOverloadEntry = (session, exerciseId) => {
     maxWeight,
     totalReps,
     bestSetReps,
+    averageReps,
     score,
   }
 }
