@@ -478,12 +478,17 @@ function GymLive() {
         ) : null}
 
         <GymLiveLoadSessionsModal
-          isOpen={isLoadModalOpen}
-          isLoading={isLoadingSessions}
-          sessions={loadableSessions}
-          onClose={handleCloseLoadModal}
-          onSelectSession={handleLoadSession}
-        />
+  isOpen={isLoadModalOpen}
+  isLoading={isLoadingSessions}
+  sessions={loadableSessions}
+  onClose={handleCloseLoadModal}
+  onSelectSession={handleLoadSession}
+  onDeleteSession={(deletedSessionId) => {
+    setLoadableSessions((prev) =>
+      prev.filter((session) => session.id !== deletedSessionId)
+    )
+  }}
+/>
       </div>
     </div>
   )

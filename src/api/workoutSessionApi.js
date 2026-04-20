@@ -24,3 +24,7 @@ export const completeWorkoutSession = async (id, payload) => {
   const response = await api.post(`/WorkoutSessions/${id}/Complete`, payload)
   return response.data
 }
+
+export const deleteWorkoutSession = async (id) => {
+  await api.delete(`/WorkoutSessions/${id}`)
+}

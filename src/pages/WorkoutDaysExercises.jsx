@@ -40,7 +40,7 @@ function WorkoutDaysExercises() {
   }
 
   return (
-    <div className="min-h-screen w-screen bg-slate-100">
+    <div className="min-h-screen w-screen bg-[#EEF1F8]">
       <div className="mx-auto w-full max-w-4xl px-4 py-4">
         <WorkoutDayExercisesTitleSection title={workoutDay?.name || 'Workout Day'} />
         <WorkoutDayExercisesListSection workoutDay={workoutDay} />

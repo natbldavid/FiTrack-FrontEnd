@@ -19,3 +19,7 @@ export const updateFood = async (foodId, payload) => {
   const response = await api.put(`/foods/${foodId}`, payload)
   return response.data
 }
+
+export const deleteFood = async (foodId) => {
+  await api.delete(`/foods/${foodId}`)
+}

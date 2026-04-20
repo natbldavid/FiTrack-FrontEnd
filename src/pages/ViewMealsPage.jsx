@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { uploadImageToCloudinary } from '../api/cloudinaryApi'
 import { createFoodLog } from '../api/foodLogApi'
-import { getMealById, updateMeal } from '../api/mealApi'
+import { deleteMeal, getMealById, updateMeal } from '../api/mealApi'
+import { ROUTES } from '../routes/routePaths'
 
 const PLACEHOLDER_IMAGE = '/food-and-meal-image-placeholder.png'
 
@@ -78,6 +79,49 @@ function AddPhotoSheet({ onClose, onTakePhoto, onChoosePhoto }) {
           >
             Cancel
           </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function DeleteConfirmModal({
+  isOpen,
+  title,
+  message,
+  onCancel,
+  onConfirm,
+  isDeleting,
+}) {
+  if (!isOpen) return null
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/40" aria-hidden="true" />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+        <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+          <h2 className="text-lg font-bold text-black">{title}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{message}</p>
+
+          <div className="mt-5 flex gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isDeleting}
+              className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={isDeleting}
+              className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -254,6 +298,16 @@ const formatLogDate = (value) => {
   return `${year}-${month}-${day}`
 }
 
+const hasValidImage = (imageUrl) => {
+  const normalizedValue = String(imageUrl ?? '').trim().toLowerCase()
+
+  return Boolean(
+    normalizedValue &&
+      normalizedValue !== 'null' &&
+      normalizedValue !== 'undefined'
+  )
+}
+
 function ViewMealsPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -266,9 +320,7 @@ function ViewMealsPage() {
   const isViewOnly = viewMode === 'view'
 
   const selectedMealSlot =
-    location.state?.mealSlot ??
-    location.state?.selectedMealSlot ??
-    null
+    location.state?.mealSlot ?? location.state?.selectedMealSlot ?? null
 
   const selectedDate = location.state?.selectedDate ?? null
 
@@ -276,10 +328,13 @@ function ViewMealsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLogging, setIsLogging] = useState(false)
   const [isUpdatingImage, setIsUpdatingImage] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [showPhotoSheet, setShowPhotoSheet] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [logErrorMessage, setLogErrorMessage] = useState('')
   const [photoErrorMessage, setPhotoErrorMessage] = useState('')
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
@@ -295,6 +350,7 @@ function ViewMealsPage() {
       try {
         setIsLoading(true)
         setErrorMessage('')
+        setDeleteErrorMessage('')
 
         const response = await getMealById(mealId)
 
@@ -337,21 +393,11 @@ function ViewMealsPage() {
   const proteinPercentage =
     macroTotal > 0 ? Math.round((totals.protein / macroTotal) * 100) : 0
 
-  const hasValidMealImage = (imageUrl) => {
-  const normalizedValue = String(imageUrl ?? '').trim().toLowerCase()
-
-  return Boolean(
-    normalizedValue &&
-      normalizedValue !== 'null' &&
-      normalizedValue !== 'undefined'
-  )
-}
-
-const mealHasRealImage = hasValidMealImage(meal?.imageUrl)
-const mealImageSrc = mealHasRealImage ? meal.imageUrl : PLACEHOLDER_IMAGE
-const mealItems = Array.isArray(meal?.items) ? meal.items : []
-const formattedLogDate = formatLogDate(selectedDate)
-const isUsingPlaceholderImage = !mealHasRealImage
+  const mealHasRealImage = hasValidImage(meal?.imageUrl)
+  const mealImageSrc = mealHasRealImage ? meal.imageUrl : PLACEHOLDER_IMAGE
+  const mealItems = Array.isArray(meal?.items) ? meal.items : []
+  const formattedLogDate = formatLogDate(selectedDate)
+  const isUsingPlaceholderImage = !mealHasRealImage
 
   const handleGoBack = () => {
     navigate(-1)
@@ -362,6 +408,7 @@ const isUsingPlaceholderImage = !mealHasRealImage
       setIsLogging(true)
       setLogErrorMessage('')
       setSuccessMessage('')
+      setDeleteErrorMessage('')
 
       if (!meal?.id) {
         setLogErrorMessage('Meal not found.')
@@ -413,6 +460,31 @@ const isUsingPlaceholderImage = !mealHasRealImage
     }
   }
 
+  const handleDeleteMeal = async () => {
+    if (!meal?.id || isDeleting) {
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+      setDeleteErrorMessage('')
+      setLogErrorMessage('')
+      setPhotoErrorMessage('')
+      setSuccessMessage('')
+
+      await deleteMeal(meal.id)
+
+      setShowDeleteModal(false)
+      navigate(ROUTES.FOOD, { replace: true })
+    } catch (error) {
+      console.error('Failed to delete meal:', error)
+      setDeleteErrorMessage('Unable to delete meal.')
+      setShowDeleteModal(false)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0]
 
@@ -424,6 +496,7 @@ const isUsingPlaceholderImage = !mealHasRealImage
     try {
       setIsUpdatingImage(true)
       setPhotoErrorMessage('')
+      setDeleteErrorMessage('')
       setSuccessMessage('')
       setShowPhotoSheet(false)
 
@@ -463,6 +536,7 @@ const isUsingPlaceholderImage = !mealHasRealImage
 
   const isLogDisabled =
     isLogging ||
+    isDeleting ||
     !meal ||
     !mealItems.length ||
     !selectedMealSlot ||
@@ -493,7 +567,7 @@ const isUsingPlaceholderImage = !mealHasRealImage
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-28">
+    <div className="min-h-screen bg-slate-100 pb-40">
       {successMessage ? (
         <div className="fixed inset-x-4 top-4 z-50 rounded-2xl bg-green-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg">
           {successMessage}
@@ -501,33 +575,33 @@ const isUsingPlaceholderImage = !mealHasRealImage
       ) : null}
 
       <section className="relative h-[30vh] min-h-[220px] w-full overflow-hidden bg-slate-200">
-  <img
-    src={mealImageSrc}
-    alt={meal?.name || 'Meal'}
-    className="absolute inset-0 h-full w-full object-cover"
-    onError={(event) => {
-      event.currentTarget.src = PLACEHOLDER_IMAGE
-    }}
-  />
+        <img
+          src={mealImageSrc}
+          alt={meal?.name || 'Meal'}
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(event) => {
+            event.currentTarget.src = PLACEHOLDER_IMAGE
+          }}
+        />
 
-  {isUsingPlaceholderImage ? (
-    <>
-      <div className="absolute inset-0 z-10 bg-black/35" />
+        {isUsingPlaceholderImage ? (
+          <>
+            <div className="absolute inset-0 z-10 bg-black/35" />
 
-      <div className="absolute inset-0 z-20 flex items-center justify-center">
-        <button
-          type="button"
-          onClick={() => setShowPhotoSheet(true)}
-          disabled={isUpdatingImage}
-          className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-lg disabled:opacity-60"
-          aria-label="Add meal photo"
-        >
-          <CameraIcon className="h-7 w-7" />
-        </button>
-      </div>
-    </>
-  ) : null}
-</section>
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setShowPhotoSheet(true)}
+                disabled={isUpdatingImage || isDeleting}
+                className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-lg disabled:opacity-60"
+                aria-label="Add meal photo"
+              >
+                <CameraIcon className="h-7 w-7" />
+              </button>
+            </div>
+          </>
+        ) : null}
+      </section>
 
       <section className="px-4 pt-4">
         <div className="relative flex min-h-10 items-center justify-center">
@@ -548,6 +622,16 @@ const isUsingPlaceholderImage = !mealHasRealImage
 
       {photoErrorMessage ? (
         <div className="px-4 pt-4 text-sm text-red-500">{photoErrorMessage}</div>
+      ) : null}
+
+      {logErrorMessage ? (
+        <div className="px-4 pt-4 text-sm text-red-500">{logErrorMessage}</div>
+      ) : null}
+
+      {deleteErrorMessage ? (
+        <div className="px-4 pt-4 text-sm text-red-500">
+          {deleteErrorMessage}
+        </div>
       ) : null}
 
       <section className="px-4 pt-4">
@@ -605,13 +689,9 @@ const isUsingPlaceholderImage = !mealHasRealImage
         </div>
       </section>
 
-      {logErrorMessage ? (
-        <div className="px-4 pt-4 text-sm text-red-500">{logErrorMessage}</div>
-      ) : null}
-
-      {!isViewOnly ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-5 pt-3 backdrop-blur">
-          <div className="mx-auto w-full max-w-3xl">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-5 pt-3 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+          {!isViewOnly ? (
             <button
               type="button"
               onClick={handleLogMeal}
@@ -620,9 +700,18 @@ const isUsingPlaceholderImage = !mealHasRealImage
             >
               {isLogging ? 'Logging...' : 'Log'}
             </button>
-          </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            disabled={isDeleting || isLogging || isUpdatingImage}
+            className="w-full rounded-2xl bg-red-600 px-4 py-4 text-base font-semibold text-white disabled:bg-slate-300"
+          >
+            Delete Item
+          </button>
         </div>
-      ) : null}
+      </div>
 
       <input
         ref={cameraInputRef}
@@ -648,6 +737,15 @@ const isUsingPlaceholderImage = !mealHasRealImage
           onChoosePhoto={() => fileInputRef.current?.click()}
         />
       ) : null}
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete meal?"
+        message="Are you sure you want to delete this item? This action will remove it from your active meals list."
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteMeal}
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }
